@@ -29,6 +29,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author Eric Zhao
@@ -54,7 +55,7 @@ public class AuthorityRuleNacosPublisher implements DynamicRulePublisher<List<Au
             AuthorityRuleClientEntity authorityRuleClientEntity = new AuthorityRuleClientEntity();
             BeanUtils.copyProperties(rule, authorityRuleClientEntity);
             return authorityRuleClientEntity;
-        }).toList();
+        }).collect(Collectors.toList());
 
         configService.publishConfig(app + NacosConfigUtil.AUTHORITY_DATA_ID_POSTFIX,
                 NacosConfigUtil.GROUP_ID, authorityRuleEncoder.convert(authorityRuleClientEntities), ConfigType.JSON.getType());

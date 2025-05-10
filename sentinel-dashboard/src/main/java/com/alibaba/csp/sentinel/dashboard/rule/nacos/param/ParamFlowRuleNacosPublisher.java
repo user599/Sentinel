@@ -29,6 +29,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author Eric Zhao
@@ -56,7 +57,7 @@ public class ParamFlowRuleNacosPublisher implements DynamicRulePublisher<List<Pa
             ParamFlowRuleClientEntity entity = new ParamFlowRuleClientEntity();
             BeanUtils.copyProperties(rule, entity);
             return entity;
-        }).toList();
+        }).collect(Collectors.toList());
 
         configService.publishConfig(app + NacosConfigUtil.PARAM_FLOW_DATA_ID_POSTFIX,
                 NacosConfigUtil.GROUP_ID, paramFlowRuleEncoder.convert(list), ConfigType.JSON.getType());

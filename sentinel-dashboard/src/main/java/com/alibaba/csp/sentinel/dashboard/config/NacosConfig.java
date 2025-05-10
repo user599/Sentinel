@@ -113,12 +113,12 @@ public class NacosConfig implements BeanFactoryAware {
      * @author weiziming
      * @date 2025/5/10 13:44
      */
-    class ConverterFactory {
+    static class ConverterFactory {
         public static <T extends RuleEntity> Converter<List<T>, String> createEncoder() {
             return JSON::toJSONString;
         }
 
-        public static <T extends RuleEntity> Converter<String, List<T>> createDecoder(Class<T> clazz) {
+         public static <T extends RuleEntity> Converter<String, List<T>> createDecoder(Class<T> clazz) {
             return source -> JSON.parseArray(source, clazz);
         }
     }
