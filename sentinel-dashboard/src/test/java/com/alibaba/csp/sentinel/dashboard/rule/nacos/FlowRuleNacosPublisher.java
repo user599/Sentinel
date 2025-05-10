@@ -19,6 +19,7 @@ import java.util.List;
 
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.FlowRuleEntity;
 import com.alibaba.csp.sentinel.dashboard.rule.DynamicRulePublisher;
+import com.alibaba.csp.sentinel.dashboard.util.NacosConfigUtil;
 import com.alibaba.csp.sentinel.datasource.Converter;
 import com.alibaba.csp.sentinel.util.AssertUtil;
 import com.alibaba.nacos.api.config.ConfigService;
@@ -44,7 +45,7 @@ public class FlowRuleNacosPublisher implements DynamicRulePublisher<List<FlowRul
         if (rules == null) {
             return;
         }
-        configService.publishConfig(app + NacosConfigUtil.FLOW_DATA_ID_POSTFIX,
+        configService.publishConfig(app + com.alibaba.csp.sentinel.dashboard.util.NacosConfigUtil.FLOW_DATA_ID_POSTFIX,
             NacosConfigUtil.GROUP_ID, converter.convert(rules));
     }
 }

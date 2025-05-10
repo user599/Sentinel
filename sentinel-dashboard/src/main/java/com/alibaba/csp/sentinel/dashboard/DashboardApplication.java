@@ -19,6 +19,7 @@ import com.alibaba.csp.sentinel.init.InitExecutor;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  * Sentinel dashboard application.
@@ -30,10 +31,11 @@ public class DashboardApplication {
 
     public static void main(String[] args) {
         triggerSentinelInit();
-        SpringApplication.run(DashboardApplication.class, args);
+        ConfigurableApplicationContext applicationContext = SpringApplication.run(DashboardApplication.class, args);
+
     }
 
     private static void triggerSentinelInit() {
-        new Thread(() -> InitExecutor.doInit()).start();
+        new Thread(InitExecutor::doInit).start();
     }
 }

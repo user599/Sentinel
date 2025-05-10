@@ -13,40 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alibaba.csp.sentinel.dashboard.rule.nacos;
+package com.alibaba.csp.sentinel.dashboard.rule.nacos.degrade;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.DegradeRuleEntity;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.FlowRuleEntity;
 import com.alibaba.csp.sentinel.dashboard.rule.DynamicRuleProvider;
 import com.alibaba.csp.sentinel.dashboard.util.NacosConfigUtil;
 import com.alibaba.csp.sentinel.datasource.Converter;
 import com.alibaba.csp.sentinel.util.StringUtil;
 import com.alibaba.nacos.api.config.ConfigService;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Eric Zhao
  * @since 1.4.0
  */
-@Component("flowRuleNacosProvider")
-public class FlowRuleNacosProvider implements DynamicRuleProvider<List<FlowRuleEntity>> {
+@Component("degradeRuleNacosProvider")
+public class DegradeRuleNacosProvider implements DynamicRuleProvider<List<DegradeRuleEntity>> {
 
     @Autowired
     private ConfigService configService;
-    @Autowired
-    private Converter<String, List<FlowRuleEntity>> converter;
+
+    @Resource
+    private Converter<String, List<DegradeRuleEntity>> degradeRuleDecoder;
 
     @Override
-    public List<FlowRuleEntity> getRules(String appName) throws Exception {
-        String rules = configService.getConfig(appName + com.alibaba.csp.sentinel.dashboard.util.NacosConfigUtil.FLOW_DATA_ID_POSTFIX,
-            NacosConfigUtil.GROUP_ID, 3000);
+    public List<DegradeRuleEntity> getRules(String appName) throws Exception {
+        String rules = configService.getConfig(appName + NacosConfigUtil.DEGRADE_DATA_ID_POSTFIX,
+                NacosConfigUtil.GROUP_ID, 3000);
         if (StringUtil.isEmpty(rules)) {
             return new ArrayList<>();
         }
-        return converter.convert(rules);
+        return degradeRuleDecoder.convert(rules);
     }
 }
