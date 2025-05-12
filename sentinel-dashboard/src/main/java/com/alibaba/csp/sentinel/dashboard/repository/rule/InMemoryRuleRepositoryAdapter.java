@@ -68,9 +68,15 @@ public abstract class InMemoryRuleRepositoryAdapter<T extends RuleEntity> implem
             return null;
         }
         List<T> savedRules = new ArrayList<>(rules.size());
+        Long ruleId = 0L;
         for (T rule : rules) {
+            if (ruleId < rule.getId()) {
+                ruleId = rule.getId();
+            }
             savedRules.add(save(rule));
         }
+        // 设置最大id，解决重启dashboard后新增规则时导致旧规则丢失问题
+        setMaxId(ruleId);
         return savedRules;
     }
 
@@ -126,4 +132,11 @@ public abstract class InMemoryRuleRepositoryAdapter<T extends RuleEntity> implem
      * @return next unused id
      */
     abstract protected long nextId();
+
+    /**
+     * init maxId fixed bug
+     *
+     * @see {https://blog.csdn.net/jack2350536098/article/details/131165294}
+     */
+    abstract protected void setMaxId(long id);
 }

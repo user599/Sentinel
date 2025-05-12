@@ -28,12 +28,6 @@ import org.springframework.stereotype.Component;
  * @since 0.2.1
  */
 @Component
-public class InMemAuthorityRuleStore extends InMemoryRuleRepositoryAdapter<AuthorityRuleEntity> {
+public class InMemAuthorityRuleStore extends InMemoryRuleRepositoryWithAtomicId<AuthorityRuleEntity> {
 
-    private static AtomicLong ids = new AtomicLong(0);
-
-    @Override
-    protected long nextId() {
-        return ids.incrementAndGet();
-    }
 }
