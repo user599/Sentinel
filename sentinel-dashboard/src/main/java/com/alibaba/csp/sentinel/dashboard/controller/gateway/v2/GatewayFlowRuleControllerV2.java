@@ -13,33 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alibaba.csp.sentinel.dashboard.controller.gateway;
+package com.alibaba.csp.sentinel.dashboard.controller.gateway.v2;
 
 
 import com.alibaba.csp.sentinel.dashboard.auth.AuthAction;
 import com.alibaba.csp.sentinel.dashboard.auth.AuthService;
-import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.gateway.GatewayFlowRuleEntity;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.gateway.GatewayParamFlowItemEntity;
-import com.alibaba.csp.sentinel.dashboard.discovery.MachineInfo;
 import com.alibaba.csp.sentinel.dashboard.domain.Result;
 import com.alibaba.csp.sentinel.dashboard.domain.vo.gateway.rule.AddFlowRuleReqVo;
 import com.alibaba.csp.sentinel.dashboard.domain.vo.gateway.rule.GatewayParamFlowItemVo;
 import com.alibaba.csp.sentinel.dashboard.domain.vo.gateway.rule.UpdateFlowRuleReqVo;
 import com.alibaba.csp.sentinel.dashboard.repository.gateway.InMemGatewayFlowRuleStore;
+import com.alibaba.csp.sentinel.dashboard.rule.DynamicRuleProvider;
+import com.alibaba.csp.sentinel.dashboard.rule.DynamicRulePublisher;
 import com.alibaba.csp.sentinel.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import static com.alibaba.csp.sentinel.slots.block.RuleConstant.*;
 import static com.alibaba.csp.sentinel.adapter.gateway.common.SentinelGatewayConstants.*;
 import static com.alibaba.csp.sentinel.dashboard.datasource.entity.gateway.GatewayFlowRuleEntity.*;
+import static com.alibaba.csp.sentinel.slots.block.RuleConstant.*;
 
 /**
  * Gateway flow rule Controller for manage gateway flow rules.
@@ -48,33 +49,33 @@ import static com.alibaba.csp.sentinel.dashboard.datasource.entity.gateway.Gatew
  * @since 1.7.0
  */
 @RestController
-@RequestMapping(value = "/gateway/flow")
-public class GatewayFlowRuleController {
+@RequestMapping(value = "/v2/gateway/flow")
+public class GatewayFlowRuleControllerV2 {
 
-    private final Logger logger = LoggerFactory.getLogger(GatewayFlowRuleController.class);
+    private final Logger logger = LoggerFactory.getLogger(GatewayFlowRuleControllerV2.class);
 
     @Autowired
     private InMemGatewayFlowRuleStore repository;
 
     @Autowired
-    private SentinelApiClient sentinelApiClient;
+    @Qualifier("gatewayFlowRuleNacosProvider")
+    private DynamicRuleProvider<List<GatewayFlowRuleEntity>>  provider;
+
+    @Autowired
+    @Qualifier("gatewayFlowRuleNacosPublisher")
+    private DynamicRulePublisher<List<GatewayFlowRuleEntity>> publisher;
+
 
     @GetMapping("/list.json")
     @AuthAction(AuthService.PrivilegeType.READ_RULE)
-    public Result<List<GatewayFlowRuleEntity>> queryFlowRules(String app, String ip, Integer port) {
+    public Result<List<GatewayFlowRuleEntity>> queryFlowRules(String app) {
 
         if (StringUtil.isEmpty(app)) {
             return Result.ofFail(-1, "app can't be null or empty");
         }
-        if (StringUtil.isEmpty(ip)) {
-            return Result.ofFail(-1, "ip can't be null or empty");
-        }
-        if (port == null) {
-            return Result.ofFail(-1, "port can't be null");
-        }
 
         try {
-            List<GatewayFlowRuleEntity> rules = sentinelApiClient.fetchGatewayFlowRules(app, ip, port).get();
+            List<GatewayFlowRuleEntity> rules = provider.getRules(app);
             repository.saveAll(rules);
             return Result.ofSuccess(rules);
         } catch (Throwable throwable) {
@@ -94,18 +95,6 @@ public class GatewayFlowRuleController {
 
         GatewayFlowRuleEntity entity = new GatewayFlowRuleEntity();
         entity.setApp(app.trim());
-
-        String ip = reqVo.getIp();
-        if (StringUtil.isBlank(ip)) {
-            return Result.ofFail(-1, "ip can't be null or empty");
-        }
-        entity.setIp(ip.trim());
-
-        Integer port = reqVo.getPort();
-        if (port == null) {
-            return Result.ofFail(-1, "port can't be null");
-        }
-        entity.setPort(port);
 
         // API类型, Route ID或API分组
         Integer resourceMode = reqVo.getResourceMode();
@@ -242,9 +231,11 @@ public class GatewayFlowRuleController {
             logger.error("add gateway flow rule error:", throwable);
             return Result.ofThrowable(-1, throwable);
         }
-
-        if (!publishRules(app, ip, port)) {
-            logger.warn("publish gateway flow rules fail after add");
+        try {
+            publishRules(app);
+        } catch (Throwable throwable) {
+            logger.error("publish gateway flow rules fail after add: ", throwable);
+            return Result.ofThrowable(-1, throwable);
         }
 
         return Result.ofSuccess(entity);
@@ -389,8 +380,11 @@ public class GatewayFlowRuleController {
             return Result.ofThrowable(-1, throwable);
         }
 
-        if (!publishRules(app, entity.getIp(), entity.getPort())) {
-            logger.warn("publish gateway flow rules fail after update");
+        try {
+            publishRules(app);
+        } catch (Throwable throwable) {
+            logger.error("publish gateway flow rules fail after add: ", throwable);
+            return Result.ofThrowable(-1, throwable);
         }
 
         return Result.ofSuccess(entity);
@@ -417,15 +411,17 @@ public class GatewayFlowRuleController {
             return Result.ofThrowable(-1, throwable);
         }
 
-        if (!publishRules(oldEntity.getApp(), oldEntity.getIp(), oldEntity.getPort())) {
-            logger.warn("publish gateway flow rules fail after delete");
+        try {
+            publishRules(oldEntity.getApp());
+        } catch (Throwable throwable) {
+            logger.error("publish gateway flow rules fail after add: ", throwable);
+            return Result.ofThrowable(-1, throwable);
         }
-
         return Result.ofSuccess(id);
     }
 
-    private boolean publishRules(String app, String ip, Integer port) {
-        List<GatewayFlowRuleEntity> rules = repository.findAllByMachine(MachineInfo.of(app, ip, port));
-        return sentinelApiClient.modifyGatewayFlowRules(app, ip, port, rules);
+    private void publishRules(String app) throws Exception {
+        List<GatewayFlowRuleEntity> rules = repository.findAllByApp(app);
+        publisher.publish(app, rules);
     }
 }

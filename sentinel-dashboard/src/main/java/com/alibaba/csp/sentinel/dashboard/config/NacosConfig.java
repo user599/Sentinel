@@ -15,10 +15,11 @@
  */
 package com.alibaba.csp.sentinel.dashboard.config;
 
+import com.alibaba.csp.sentinel.dashboard.datasource.entity.gateway.ApiDefinitionEntity;
+import com.alibaba.csp.sentinel.dashboard.datasource.entity.gateway.GatewayFlowRuleEntity;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.*;
 import com.alibaba.csp.sentinel.datasource.Converter;
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
 import com.alibaba.nacos.api.config.ConfigFactory;
 import com.alibaba.nacos.api.config.ConfigService;
 import org.springframework.beans.BeansException;
@@ -47,11 +48,16 @@ public class NacosConfig implements BeanFactoryAware {
     private static final Map<String, Class<? extends RuleEntity>> RULE_TYPE_MAP = new LinkedHashMap<>();
 
     /**
+     * 规则映射
+     * 将解析为 ${key}RuleEncoder/${key}RuleDecoder
+     *
      * 流控规则
      * 熔断规则
      * 热点规则 (注意：这个在dashboard和在client用的不是一个实体，需要我们自行转换)
      * 系统规则
-     * 授权规则
+     * 授权规则 (注意：这个在dashboard和在client用的不是一个实体，需要我们自行转换)
+     * 网关流控
+     * 网关api管理
      */
     static {
         RULE_TYPE_MAP.put("flow", FlowRuleEntity.class);
@@ -59,6 +65,8 @@ public class NacosConfig implements BeanFactoryAware {
         RULE_TYPE_MAP.put("paramFlow", ParamFlowRuleClientEntity.class);
         RULE_TYPE_MAP.put("system", SystemRuleEntity.class);
         RULE_TYPE_MAP.put("authority", AuthorityRuleClientEntity.class);
+        RULE_TYPE_MAP.put("gatewayFlow", GatewayFlowRuleEntity.class);
+        RULE_TYPE_MAP.put("gatewayApiGroup", ApiDefinitionEntity.class);
     }
 
     @Bean
@@ -85,6 +93,7 @@ public class NacosConfig implements BeanFactoryAware {
 
     /**
      * 注册Converter
+     *
      * @param beanFactory
      * @param ruleKey
      * @param ruleClass
@@ -110,6 +119,7 @@ public class NacosConfig implements BeanFactoryAware {
 
     /**
      * Converter 工厂类
+     *
      * @author weiziming
      * @date 2025/5/10 13:44
      */
@@ -118,7 +128,7 @@ public class NacosConfig implements BeanFactoryAware {
             return JSON::toJSONString;
         }
 
-         public static <T extends RuleEntity> Converter<String, List<T>> createDecoder(Class<T> clazz) {
+        public static <T extends RuleEntity> Converter<String, List<T>> createDecoder(Class<T> clazz) {
             return source -> JSON.parseArray(source, clazz);
         }
     }
